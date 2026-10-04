@@ -49,6 +49,17 @@ class HomepageIntegrationTests(unittest.TestCase):
             parser.scripts,
         )
 
+    def test_toc_includes_realtime_statistics_before_abstract(self):
+        homepage = Path("index.html").read_text(encoding="utf-8")
+        toc_realtime = homepage.index('href="#realtime-statistics"')
+        toc_abstract = homepage.index('href="#abstract"')
+        script = Path("script.js").read_text(encoding="utf-8")
+
+        self.assertLess(toc_realtime, toc_abstract)
+        self.assertIn("Real-time Statistics", homepage)
+        self.assertIn("tocSectionIds", script)
+        self.assertIn("IntersectionObserver", script)
+
     def test_realtime_title_precedes_requested_metric_layout(self):
         homepage = Path("index.html").read_text(encoding="utf-8")
 
