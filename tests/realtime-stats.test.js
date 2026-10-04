@@ -185,16 +185,37 @@ test("checked-in database delta plays from the previous totals to the latest tot
 
 test("tasks use the measured total and a daily growth label", () => {
   const value = stats.parseSnapshot(checkedInPayload);
-  assert.equal(value.totals.tasks, 1822);
+  assert.equal(value.totals.tasks, checkedInPayload.totals.tasks);
   assert.deepEqual(value.tasksDaily, {
-    utcDate: "2026-07-24",
-    displayUtcDate: "2026-07-23",
-    baselineTotal: 1816,
-    increase: 9,
-    basis: "estimated"
+    utcDate: checkedInPayload.tasks_daily.utc_date,
+    displayUtcDate: checkedInPayload.tasks_daily.display_utc_date,
+    baselineTotal: checkedInPayload.tasks_daily.baseline_total,
+    increase: checkedInPayload.tasks_daily.increase,
+    basis: checkedInPayload.tasks_daily.basis
   });
+
+  // The checked-in snapshot refreshes hourly, so assert against its live fields
+  // instead of freezing an obsolete task count into the suite.
+  assert.ok(["estimated", "verified", "unavailable"].includes(value.tasksDaily.basis));
+  if (value.tasksDaily.basis === "unavailable") {
+    assert.equal(stats.formatTasksDailyRate(value.tasksDaily), "");
+  } else {
+    const prefix = value.tasksDaily.basis === "estimated" ? "Est. " : "";
+    const sign = value.tasksDaily.increase > 0 ? "+" : "";
+    assert.equal(
+      stats.formatTasksDailyRate(value.tasksDaily),
+      `${prefix}${sign}${Number(value.tasksDaily.increase).toLocaleString("en-US")} / day`
+    );
+  }
+
   assert.equal(
-    stats.formatTasksDailyRate(value.tasksDaily),
+    stats.formatTasksDailyRate({
+      utcDate: "2026-07-24",
+      displayUtcDate: "2026-07-23",
+      baselineTotal: 1816,
+      increase: 9,
+      basis: "estimated"
+    }),
     "Est. +9 / day"
   );
   assert.equal(
@@ -209,7 +230,7 @@ test("tasks use the measured total and a daily growth label", () => {
     stats.formatTasksDailyRate({
       utcDate: "2026-07-25",
       displayUtcDate: "2026-07-24",
-      baselineTotal: 1822,
+      baselineTotal: value.totals.tasks,
       increase: null,
       basis: "unavailable"
     }),
